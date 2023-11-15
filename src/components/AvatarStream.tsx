@@ -12,8 +12,6 @@ const VideoWrapper = styled.div`
   background-position: top;
   text-align: center;
   position: relative;
-
-  //width: 100%;
   video {
     border-radius: 50%;
   }
@@ -21,7 +19,7 @@ const VideoWrapper = styled.div`
 
 const VideoElement = styled.video`
   border-radius: 50%;
-  background-color: transparent;
+  background-color: rgba(0, 0, 0, 0.5);
   position: relative;
   z-index: 1;
 `
@@ -47,7 +45,7 @@ const ComponentContainer = styled.div`
 const AvatarStream = () => {
   const videoRef = useRef<HTMLVideoElement>(null)
   const idleVideoRef = useRef<HTMLVideoElement>(null)
-  const [isFirstInteraction, setIsFirstInteraction] = useState(true)
+  const [isFirstInteraction, setIsFirstInteraction] = useState(false)
   const { fetchOpenAIResponse } = useOpenAIChat()
   const {
     connectToStream,
@@ -76,19 +74,19 @@ const AvatarStream = () => {
       idleVideoRef.current.src = 'oracle_Idle.mp4'
       idleVideoRef.current.muted = true
       idleVideoRef.current.loop = true
-      //idleVideoRef.current.play()
+      idleVideoRef.current.play().catch((e) => console.error('Error playing idle video:', e))
     }
   }, [isFirstInteraction])
 
   const handleConnect = async () => {
-    setIsFirstInteraction(false)
+    setIsFirstInteraction(true)
     const sessionDetails = await connectToStream()
     setSessionId(sessionDetails.sessionId)
     setStreamId(sessionDetails.streamId)
   }
 
   const handleStart = async (userInput: string) => {
-    setIsFirstInteraction(false)
+    setIsFirstInteraction(true)
     const responseFromOpenAI = await fetchOpenAIResponse(userInput)
     await startStreaming(responseFromOpenAI)
   }

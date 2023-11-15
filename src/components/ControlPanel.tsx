@@ -65,3 +65,6 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onConnect, onStart, 
     </PanelWrapper>
   )
 }
+
+export default ControlPanel
+

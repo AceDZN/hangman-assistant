@@ -189,3 +189,5 @@ export const useDIDStreaming = () => {
   }
 }
 
+export default useDIDStreaming
+

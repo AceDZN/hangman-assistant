@@ -60,3 +60,6 @@ export const StatusDisplay: React.FC<StatusDisplayProps> = ({
     </StatusWrapper>
   )
 }
+
+export default StatusDisplay
+
