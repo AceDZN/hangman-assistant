@@ -1,3 +1,4 @@
+// components/StatusDisplay.tsx
 import React from 'react'
 import styled from 'styled-components'
 
@@ -59,4 +60,3 @@ export const StatusDisplay: React.FC<StatusDisplayProps> = ({
     </StatusWrapper>
   )
 }
-
