@@ -1,6 +1,6 @@
-import React, { useState, useContext } from 'react'
+import React, { useState } from 'react'
 import styled from 'styled-components'
-import StreamingContext from '../context/StreamingContext'
+import { useStreamingStore } from '../context/streamingStore'
 
 const PanelWrapper = styled.div`
   text-align: center;
@@ -40,7 +40,7 @@ interface ControlPanelProps {
 
 export const ControlPanel: React.FC<ControlPanelProps> = ({ onConnect, onStart, onDestroy }) => {
   const [userInput, setUserInput] = useState('')
-  const { sessionId } = useContext(StreamingContext)
+  const sessionId = useStreamingStore((state) => state.sessionId)
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setUserInput(event.target.value)
@@ -64,4 +64,6 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onConnect, onStart, 
     </PanelWrapper>
   )
 }
+
+export default ControlPanel
 

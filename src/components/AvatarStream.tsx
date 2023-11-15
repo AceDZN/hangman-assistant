@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useRef, useContext } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import styled from 'styled-components'
 import { ControlPanel } from './ControlPanel'
 import { StatusDisplay } from './StatusDisplay'
 import { useOpenAIChat } from '../hooks/useOpenAIChat'
 import { useDIDStreaming } from '../hooks/useDIDStreaming'
-import StreamingContext from '../context/StreamingContext'
+import { useStreamingStore } from '../context/streamingStore'
 
 const VideoWrapper = styled.div`
   background: url('/bg.png');
@@ -19,10 +19,6 @@ const VideoElement = styled.video`
   background-color: #000;
 `
 
-const IdleVideoElement = styled.video`
-  display: none; // initially hidden
-`
-
 const ComponentContainer = styled.div`
   width: 100%;
   display: flex;
@@ -33,7 +29,6 @@ const ComponentContainer = styled.div`
 
 const AvatarStream = () => {
   const videoRef = useRef<HTMLVideoElement>(null)
-  const idleVideoRef = useRef<HTMLVideoElement>(null)
   const { fetchOpenAIResponse } = useOpenAIChat()
   const {
     connectToStream,
@@ -47,25 +42,18 @@ const AvatarStream = () => {
     stream,
     handleVideoStatusChange,
   } = useDIDStreaming()
-  const { sessionId, setSessionId, streamId, setStreamId } = useContext(StreamingContext)
+
+  const { setSessionId, setStreamId } = useStreamingStore((state) => ({
+    setSessionId: state.setSessionId,
+    setStreamId: state.setStreamId,
+  }))
 
   useEffect(() => {
     if (videoRef.current && stream) {
       videoRef.current.srcObject = stream
       handleVideoStatusChange(true, stream)
-    } else {
-      handleIdleVideo()
     }
-  }, [stream])
-
-  const handleIdleVideo = () => {
-    if (idleVideoRef.current) {
-      idleVideoRef.current.style.display = 'block'
-      idleVideoRef.current.src = 'oracle_Idle.mp4'
-      idleVideoRef.current.loop = true
-      idleVideoRef.current.play().catch((e) => console.error('Error playing idle video:', e))
-    }
-  }
+  }, [stream, handleVideoStatusChange])
 
   const handleConnect = async () => {
     const sessionDetails = await connectToStream()
@@ -88,7 +76,6 @@ const AvatarStream = () => {
     <ComponentContainer>
       <VideoWrapper>
         <VideoElement ref={videoRef} width="400" height="400" autoPlay />
-        <IdleVideoElement ref={idleVideoRef} width="400" height="400" autoPlay />
       </VideoWrapper>
       <ControlPanel onConnect={handleConnect} onStart={handleStart} onDestroy={handleDestroy} />
       <StatusDisplay
