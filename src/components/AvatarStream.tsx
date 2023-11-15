@@ -8,23 +8,35 @@ import { useDIDStreaming } from '../hooks/useDIDStreaming'
 import StreamingContext from '../context/StreamingContext'
 
 const VideoWrapper = styled.div`
-  background: url('/bg.png');
   height: 500px;
   background-position: top;
   text-align: center;
-  width: 100%;
+  position: relative;
+
+  //width: 100%;
+  video {
+    border-radius: 50%;
+  }
 `
 
 const VideoElement = styled.video`
   border-radius: 50%;
-  background-color: #000;
+  background-color: transparent;
+  position: relative;
+  z-index: 1;
 `
 
 const IdleVideoElement = styled.video`
   display: none; // initially hidden
+  position: absolute;
+  z-index: 0;
+  top: 0;
 `
 
 const ComponentContainer = styled.div`
+  background: url('/bg.png');
+  background-repeat: no-repeat;
+  background-position: center top;
   width: 100%;
   display: flex;
   flex-direction: column;
@@ -35,6 +47,7 @@ const ComponentContainer = styled.div`
 const AvatarStream = () => {
   const videoRef = useRef<HTMLVideoElement>(null)
   const idleVideoRef = useRef<HTMLVideoElement>(null)
+  const [isFirstInteraction, setIsFirstInteraction] = useState(true)
   const { fetchOpenAIResponse } = useOpenAIChat()
   const {
     connectToStream,
@@ -54,32 +67,34 @@ const AvatarStream = () => {
     if (videoRef.current && stream) {
       videoRef.current.srcObject = stream
       handleVideoStatusChange(true, stream)
-    } else {
-      handleIdleVideo()
     }
-  }, [stream])
+  }, [stream, handleVideoStatusChange])
 
-  const handleIdleVideo = () => {
-    if (idleVideoRef.current) {
+  useEffect(() => {
+    if (isFirstInteraction && idleVideoRef.current) {
       idleVideoRef.current.style.display = 'block'
       idleVideoRef.current.src = 'oracle_Idle.mp4'
+      idleVideoRef.current.muted = true
       idleVideoRef.current.loop = true
-      idleVideoRef.current.play().catch((e) => console.error('Error playing idle video:', e))
+      //idleVideoRef.current.play()
     }
-  }
+  }, [isFirstInteraction])
 
   const handleConnect = async () => {
+    setIsFirstInteraction(false)
     const sessionDetails = await connectToStream()
     setSessionId(sessionDetails.sessionId)
     setStreamId(sessionDetails.streamId)
   }
 
   const handleStart = async (userInput: string) => {
+    setIsFirstInteraction(false)
     const responseFromOpenAI = await fetchOpenAIResponse(userInput)
     await startStreaming(responseFromOpenAI)
   }
 
   const handleDestroy = async () => {
+    setIsFirstInteraction(true)
     await destroyStream()
     setSessionId(null)
     setStreamId(null)
@@ -89,7 +104,7 @@ const AvatarStream = () => {
     <ComponentContainer>
       <VideoWrapper>
         <VideoElement ref={videoRef} width="400" height="400" autoPlay />
-        <IdleVideoElement ref={idleVideoRef} width="400" height="400" autoPlay />
+        <IdleVideoElement ref={idleVideoRef} width="400" height="400" autoPlay muted={true} />
       </VideoWrapper>
       <ControlPanel onConnect={handleConnect} onStart={handleStart} onDestroy={handleDestroy} />
       <StatusDisplay
@@ -104,3 +119,4 @@ const AvatarStream = () => {
 }
 
 export default AvatarStream
+

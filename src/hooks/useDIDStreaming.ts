@@ -1,5 +1,5 @@
 // hooks/useDIDStreaming.ts
-import { useState, useCallback, useContext, useRef } from 'react'
+import { useState, useCallback, useRef, useContext } from 'react'
 import { constants } from '../constants'
 import StreamingContext from '../context/StreamingContext'
 
@@ -10,39 +10,36 @@ export const useDIDStreaming = () => {
   const [signalingStatus, setSignalingStatus] = useState('')
   const [streamingStatus, setStreamingStatus] = useState('')
   const [stream, setStream] = useState<MediaStream | null>(null)
-  const [videoIsPlaying, setVideoIsPlaying] = useState(false)
 
   const { setSessionId, setStreamId } = useContext(StreamingContext)
 
-  let peerConnection: RTCPeerConnection | null = null
-  let streamId = useRef<string | null>(null)
-  let sessionId: string | null = null
-  let sessionClientAnswer: RTCSessionDescriptionInit | null = null
+  const peerConnectionRef = useRef<RTCPeerConnection | null>(null)
+  const streamIdRef = useRef<string | null>(null)
+  const sessionIdRef = useRef<string | null>(null)
 
   const handleVideoStatusChange = useCallback((isPlaying: boolean, newStream: MediaStream) => {
-    setVideoIsPlaying(isPlaying)
     if (isPlaying) {
       setStream(newStream)
     }
   }, [])
 
   const createPeerConnection = useCallback(
-    async (offer: any, iceServers: any) => {
-      if (!peerConnection) {
-        peerConnection = new RTCPeerConnection({ iceServers })
-        peerConnection.addEventListener(
+    async (offer: RTCSessionDescriptionInit, iceServers: RTCIceServer[]) => {
+      if (!peerConnectionRef.current) {
+        peerConnectionRef.current = new RTCPeerConnection({ iceServers })
+        peerConnectionRef.current.addEventListener(
           'icegatheringstatechange',
           () => {
-            setIceGatheringStatus(peerConnection?.iceGatheringState ?? '')
+            setIceGatheringStatus(peerConnectionRef.current?.iceGatheringState ?? '')
           },
           true,
         )
-        peerConnection.addEventListener(
+        peerConnectionRef.current.addEventListener(
           'icecandidate',
-          async (event) => {
+          async (event: RTCPeerConnectionIceEvent) => {
             if (event.candidate) {
               const { candidate, sdpMid, sdpMLineIndex } = event.candidate
-              await fetch(`${constants.DID_API_URL}/talks/streams/${streamId}/ice`, {
+              await fetch(`${constants.DID_API_URL}/talks/streams/${streamIdRef.current}/ice`, {
                 method: 'POST',
                 headers: {
                   Authorization: `Basic ${constants.DID_API_KEY}`,
@@ -52,58 +49,52 @@ export const useDIDStreaming = () => {
                   candidate,
                   sdpMid,
                   sdpMLineIndex,
-                  session_id: sessionId,
+                  session_id: sessionIdRef.current,
                 }),
               })
             }
           },
           true,
         )
-        peerConnection.addEventListener('track', (event) => {
-          if (event.track.kind === 'video') {
-            handleVideoStatusChange(true, event.streams[0]) // Set the received stream and update video status
-          }
-        })
-        peerConnection.addEventListener(
+        peerConnectionRef.current.addEventListener(
+          'track',
+          (event: RTCTrackEvent) => {
+            if (event.track.kind === 'video') {
+              handleVideoStatusChange(true, event.streams[0]) // Set the received stream and update video status
+            }
+          },
+          true,
+        )
+        peerConnectionRef.current.addEventListener(
           'iceconnectionstatechange',
           () => {
-            setIceConnectionStatus(peerConnection?.iceConnectionState ?? '')
+            setIceConnectionStatus(peerConnectionRef.current?.iceConnectionState ?? '')
           },
           true,
         )
-        peerConnection.addEventListener(
+        peerConnectionRef.current.addEventListener(
           'connectionstatechange',
           () => {
-            setPeerConnectionStatus(peerConnection?.connectionState ?? '')
+            setPeerConnectionStatus(peerConnectionRef.current?.connectionState ?? '')
           },
           true,
         )
-        peerConnection.addEventListener(
+        peerConnectionRef.current.addEventListener(
           'signalingstatechange',
           () => {
-            setSignalingStatus(peerConnection?.signalingState ?? '')
+            setSignalingStatus(peerConnectionRef.current?.signalingState ?? '')
           },
           true,
         )
       }
 
-      await peerConnection.setRemoteDescription(offer)
-      sessionClientAnswer = await peerConnection.createAnswer()
-      await peerConnection.setLocalDescription(sessionClientAnswer)
+      await peerConnectionRef.current.setRemoteDescription(offer)
+      const answer = await peerConnectionRef.current.createAnswer()
+      await peerConnectionRef.current.setLocalDescription(answer)
 
-      return sessionClientAnswer
+      return answer
     },
-    [
-      handleVideoStatusChange,
-      sessionId,
-      streamId,
-      peerConnection,
-      setIceGatheringStatus,
-      setIceConnectionStatus,
-      setPeerConnectionStatus,
-      setSignalingStatus,
-      setStream,
-    ],
+    [handleVideoStatusChange],
   )
 
   const connectToStream = useCallback(async () => {
@@ -117,19 +108,19 @@ export const useDIDStreaming = () => {
       })
 
       const { id: newStreamId, offer, ice_servers: iceServers, session_id: newSessionId } = await sessionResponse.json()
-      streamId = newStreamId
-      sessionId = newSessionId
-      setStreamId(streamId)
-      setSessionId(sessionId)
-      sessionClientAnswer = await createPeerConnection(offer, iceServers)
+      streamIdRef.current = newStreamId
+      sessionIdRef.current = newSessionId
+      setStreamId(streamIdRef.current)
+      setSessionId(sessionIdRef.current)
+      const sessionClientAnswer = await createPeerConnection(offer, iceServers)
 
-      await fetch(`${constants.DID_API_URL}/talks/streams/${streamId}/sdp`, {
+      await fetch(`${constants.DID_API_URL}/talks/streams/${streamIdRef.current}/sdp`, {
         method: 'POST',
         headers: { Authorization: `Basic ${constants.DID_API_KEY}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ answer: sessionClientAnswer, session_id: sessionId }),
+        body: JSON.stringify({ answer: sessionClientAnswer, session_id: sessionIdRef.current }),
       })
 
-      return { streamId, sessionId }
+      return { streamId: streamIdRef.current, sessionId: sessionIdRef.current }
     } catch (error) {
       console.error('Error during connectToStream:', error)
       throw error
@@ -138,7 +129,7 @@ export const useDIDStreaming = () => {
 
   const startStreaming = useCallback(async (responseFromOpenAI: string) => {
     try {
-      await fetch(`${constants.DID_API_URL}/talks/streams/${streamId}`, {
+      await fetch(`${constants.DID_API_URL}/talks/streams/${streamIdRef.current}`, {
         method: 'POST',
         headers: {
           Authorization: `Basic ${constants.DID_API_KEY}`,
@@ -154,7 +145,7 @@ export const useDIDStreaming = () => {
           },
           config: constants.STREAMING_CONFIG,
           driver_url: constants.DRIVER_URL,
-          session_id: sessionId,
+          session_id: sessionIdRef.current,
         }),
       })
       setStreamingStatus('streaming')
@@ -166,17 +157,17 @@ export const useDIDStreaming = () => {
 
   const destroyStream = useCallback(async () => {
     try {
-      await fetch(`${constants.DID_API_URL}/talks/streams/${streamId}`, {
+      await fetch(`${constants.DID_API_URL}/talks/streams/${streamIdRef.current}`, {
         method: 'DELETE',
         headers: {
           Authorization: `Basic ${constants.DID_API_KEY}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ session_id: sessionId }),
+        body: JSON.stringify({ session_id: sessionIdRef.current }),
       })
-      if (peerConnection) {
-        peerConnection.close()
-        peerConnection = null
+      if (peerConnectionRef.current) {
+        peerConnectionRef.current.close()
+        peerConnectionRef.current = null
       }
       setStreamingStatus('destroyed')
     } catch (error) {
