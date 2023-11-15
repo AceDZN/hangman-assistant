@@ -22,6 +22,9 @@ const VideoElement = styled.video`
   background-color: rgba(0, 0, 0, 0.5);
   position: relative;
   z-index: 1;
+  &.streaming {
+    background-color: green;
+  }
 `
 
 const IdleVideoElement = styled.video`
@@ -87,7 +90,7 @@ const AvatarStream = () => {
 
   const handleStart = async (userInput: string) => {
     setIsFirstInteraction(true)
-    const responseFromOpenAI = await fetchOpenAIResponse(userInput)
+    const responseFromOpenAI = userInput //await fetchOpenAIResponse(userInput)
     await startStreaming(responseFromOpenAI)
   }
 
@@ -101,7 +104,7 @@ const AvatarStream = () => {
   return (
     <ComponentContainer>
       <VideoWrapper>
-        <VideoElement ref={videoRef} width="400" height="400" autoPlay />
+        <VideoElement className={stream ? 'streaming' : 'idle'} ref={videoRef} width="400" height="400" autoPlay />
         <IdleVideoElement ref={idleVideoRef} width="400" height="400" autoPlay muted={true} />
       </VideoWrapper>
       <ControlPanel onConnect={handleConnect} onStart={handleStart} onDestroy={handleDestroy} />
