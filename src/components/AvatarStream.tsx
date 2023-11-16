@@ -1,9 +1,7 @@
-// components/AvatarStream.tsx
 import React, { useState, useEffect, useRef, useContext } from 'react'
 import styled from 'styled-components'
-import { ControlPanel } from './ControlPanel'
-import { StatusDisplay } from './StatusDisplay'
-import { useOpenAIChat } from '../hooks/useOpenAIChat'
+import ControlPanel from './ControlPanel'
+import StatusDisplay from './StatusDisplay'
 import { useDIDStreaming } from '../hooks/useDIDStreaming'
 import StreamingContext from '../context/StreamingContext'
 
@@ -14,12 +12,11 @@ const VideoWrapper = styled.div`
   position: relative;
   video {
     border-radius: 50%;
+    background-color: rgba(0, 0, 0, 0.5);
   }
 `
 
 const VideoElement = styled.video`
-  border-radius: 50%;
-  background-color: rgba(0, 0, 0, 0.5);
   position: relative;
   z-index: 1;
   &.streaming {
@@ -28,7 +25,7 @@ const VideoElement = styled.video`
 `
 
 const IdleVideoElement = styled.video`
-  display: none; // initially hidden
+  display: none;
   position: absolute;
   z-index: 0;
   top: 0;
@@ -49,7 +46,6 @@ const AvatarStream = () => {
   const videoRef = useRef<HTMLVideoElement>(null)
   const idleVideoRef = useRef<HTMLVideoElement>(null)
   const [isFirstInteraction, setIsFirstInteraction] = useState(false)
-  const { fetchOpenAIResponse } = useOpenAIChat()
   const {
     connectToStream,
     startStreaming,
@@ -72,12 +68,16 @@ const AvatarStream = () => {
   }, [stream, handleVideoStatusChange])
 
   useEffect(() => {
-    if (isFirstInteraction && idleVideoRef.current) {
-      idleVideoRef.current.style.display = 'block'
-      idleVideoRef.current.src = 'oracle_Idle.mp4'
-      idleVideoRef.current.muted = true
-      idleVideoRef.current.loop = true
-      idleVideoRef.current.play().catch((e) => console.error('Error playing idle video:', e))
+    const idleVideo = idleVideoRef.current
+    if (idleVideo) {
+      idleVideo.src = 'oracle_Idle.mp4'
+      idleVideo.muted = true
+      idleVideo.loop = true
+
+      if (isFirstInteraction) {
+        idleVideo.style.display = 'block'
+        idleVideo.play().catch((e) => console.error('Error playing idle video:', e))
+      }
     }
   }, [isFirstInteraction])
 
@@ -90,8 +90,7 @@ const AvatarStream = () => {
 
   const handleStart = async (userInput: string) => {
     setIsFirstInteraction(true)
-    const responseFromOpenAI = userInput //await fetchOpenAIResponse(userInput)
-    await startStreaming(responseFromOpenAI)
+    await startStreaming(userInput)
   }
 
   const handleDestroy = async () => {

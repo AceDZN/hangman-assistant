@@ -1,4 +1,4 @@
-// context/StreamingContext.tsx
+// StreamingContext.tsx
 import React, { createContext, useState } from 'react'
 
 interface StreamingContextProps {

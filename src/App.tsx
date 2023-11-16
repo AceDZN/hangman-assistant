@@ -1,3 +1,4 @@
+// App.tsx
 import './App.css'
 import AvatarStream from './components/AvatarStream'
 import { StreamingProvider } from './context/StreamingContext'

@@ -1,4 +1,4 @@
-// components/ControlPanel.tsx
+// ControlPanel.tsx
 import React, { useState, useContext } from 'react'
 import styled from 'styled-components'
 import StreamingContext from '../context/StreamingContext'
